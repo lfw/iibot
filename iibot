@@ -1,0 +1,87 @@
+#!/bin/bash
+
+BOT_PID=$$
+
+# This function kills jobs, appends the chat to the log file
+# and stops the ii service.
+function cleanup {
+    printf "\n** I am being told to exit:\n"
+
+    printf " - Stopping ii service...\n"
+    kill `cat $PIDFILE` &> /dev/null
+    rm -f $PIDFILE &> /dev/null
+    sleep 1
+
+    printf " - Dumping the irc filesystem...\n"
+    rm -R $FS/* &> /dev/null
+    sleep 1
+
+    printf " - Waiting for processes to close...\n"
+    wait $ARPID
+
+    printf "\nOkay, You should be good.\n"
+    exit 0
+}
+
+# Load resources
+SCRIPT_DIR=$(readlink -f $(dirname $0))
+[ -f $SCRIPT_DIR/config ] && . $SCRIPT_DIR/config
+
+## Set default IRC port
+[ -z $PORT ] && PORT=6667
+
+# Check if we are already running
+if [ -f $PIDFILE ]; then
+    printf "ERROR: ii apears to be running.\n"
+    printf " If you are sure it is not, please remove the PID file and try agian\n"
+    printf " PIDFILE: %s\n" "${PIDFILE}"
+    exit 1
+fi
+
+# Start up II and restart if it is disconnected.
+printf "Welcome: Starting up iibot!\n"
+printf "** Use Ctrl+C to exit **\n\n"
+trap 'cleanup' SIGINT SIGQUIT
+
+touch $PIDFILE
+while [ -f $PIDFILE ]; do
+    ii -i "${FS}" -s "${HOST}" -p "${PORT}" -n "${NICK}" &> /dev/null & IIPID="$!"
+    printf "%s " "$IIPID" > $PIDFILE
+
+    while [ ! -f $FS/$HOST/out ]; do
+	sleep 1
+    done
+
+    printf "/privmsg chanserv help\n" > $FS/$HOST/in
+    printf "/privmsg nickserv help\n" > $FS/$HOST/in
+
+    while [ ! -f $FS/$HOST/nickserv/out ]; do
+	sleep 1
+    done
+
+    [ ! -z "$NICK_IDENT" ] && printf "IDENTIFY %s\n" "${NICK_IDENT}" > $FS/$HOST/nickserv/in
+
+    for CHAN in ${CHANS[@]}; do
+	${SCRIPT_DIR}/join.sh "${CHAN}" &
+    done
+
+    wait $IIPID
+    sleep 5
+    kill `cat $PIDFILE` &> /dev/null
+done 2> /dev/null & ARLPID=$!
+
+printf "Waiting for %s:  " "${HOST}"
+while [ ! -f $FS/$HOST/out ]; do
+    printf '\b|'  & sleep .25
+    printf '\b/'  & sleep .25
+    printf '\b-'  & sleep .25
+    printf '\b\\' & sleep .25
+done
+printf "\bREADY!\n"
+
+# Loop to wait for exit
+# I did think about parsing the server data here but frankly its not important to me.
+while true; do
+    sleep 5
+done
+
