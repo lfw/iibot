@@ -5,11 +5,10 @@
 
 MYPID=$$
 
-CHAN=$1
-M_NICK=$2
-M_MSG=$3
-
-CMD=${M_MSG%% *}
+# Lower case it all to avoid confusion.
+CHAN=${1,,}
+M_NICK=${2,,}
+M_MSG=${3,,}
 nick=${M_NICK:1:${#M_NICK}-2}
 
 [ -z "$CHAN" ] || [ -z "$M_NICK" ] || [ -z "$M_MSG" ] && \
@@ -19,35 +18,82 @@ nick=${M_NICK:1:${#M_NICK}-2}
 # Load resources
 SCRIPT_DIR=$(readlink -f $(dirname $0))
 [ -f $SCRIPT_DIR/config ] && . $SCRIPT_DIR/config
-[ -f $SCRIPT_DIR/passwords ] && . $SCRIPT_DIR/passwords
 
-function userAccess {
-    # channel:user:INT
-    ret=$(grep -i ^$CHAN:$nick: ${SCRIPT_DIR}/irc_passwd | cut -d":" -f3)
-    [ -z $ret ] && ret=0
-    printf "%s" "$ret"
+function hasAccess {
+    local _user=$($SCRIPT_DIR/getlogin.sh $nick 2> /dev/null)
+    local _chan=$1
+    local _role=$2
+
+    [[ -z $_user ]] && exit 1
+    [ ! -f ${SCRIPT_DIR}/uac.sh ] && return 1
+
+    ${SCRIPT_DIR}/uac.sh "check" $_user $_chan $_role
+    return $?
+}
+
+function grantAccess {
+    local _user=$($SCRIPT_DIR/getlogin.sh $1 2> /dev/null)
+    local _chan=$2
+    local _role=$3
+
+    [[ -z $_user ]] && printf "Could not find username.\n" && exit 1
+
+    ## Fix this use login name, not nick
+    ${SCRIPT_DIR}/uac.sh "add" $_user $_chan $_role
+    return $?
+}
+
+function revokeAccess {
+    local _user=$($SCRIPT_DIR/getlogin.sh $1 2> /dev/null)
+    local _chan=$2
+    local _role=$3
+
+    [[ -z $_user ]] && exit 1
+
+    ## Fix this use login name, not nick
+    ${SCRIPT_DIR}/uac.sh "remove" $_user $_chan $_role
+    return $?
+}
+
+function printAccess {
+    local _chan=$1
+
+    ${SCRIPT_DIR}/uac.sh "print" "null" $_chan "null"
+    return $?
 }
 
 CommandList=(
+    help
     ping
     talk
-    help
-    os
-    give
+    slap
     time
     uptime
-    ipaddr
-    slap
+    dance
+    echo
+    inrole
+    roles
+    grant
+    revoke
+    join
+    send
 )
+
+AUTH_FAIL="You dont have permission to run this command."
+
 # All commands should be lower case.
-case "${CMD,,}" in
+case "${M_MSG%% *}" in
     help)
 	printf -- "%s: %s\n" "${nick}" "${CommandList[*]}"
 	;;
     ping)
+	# Quick check to see if the bot is responding.
 	printf -- "%s: pong\n" "${nick}"
 	;;
     talk)
+	# Check if we are already monitoring the fifo
+	# If so then just pm them. otherwise, start a
+	# new monitor, then pm them.
 	if [ -f ${FS}/${HOST}/${nick}/out ]; then 
 	    printf -- "You rang?\n" > $FS/$HOST/$nick/in
 	else
@@ -55,28 +101,10 @@ case "${CMD,,}" in
 	    printf -- "/privmsg %s Yo\n" "$nick"
 	fi
 	;;
-    os)
-	printf -- "%s: %s\n" "${nick}" "$(uname -orm)"
-	;;
-    give)
-	if [ $[$(userAccess) & 2] == 2 ]; then
-	    args=($M_MSG)
-	    [[ -z ${args[1]} ]] && printf -- "Usage: !give [user] [flag]\n" && exit
-	    [[ -z ${args[2]} ]] && printf -- "Usage: !give [user] [flag]\n" && exit
-
-	    if [ ${args[1],,} == ${NICK,,} ]; then
-		printf -- "I will not do that to myself!\n"
-	    else
-     		printf -- "%s %s %s\n" "${args[2]}" "$CHAN" "${args[1]}" > $FS/$HOST/chanserv/in
-	    fi
-	else
-	    printf -- "%s: You do not have permission to run this command\n" "$nick"
-	fi
-	;;
     slap)
 	args=($M_MSG)
-	[ ${args[1],,} == ${NICK,,} ] && printf -- "%s: Slap yourself!\n" "$nick" && exit
-	[ ${args[1],,} == "java" ] && printf -- "Beat java with stick untill it cannot steal your computer resources anymore!\n" && exit	    
+	[ ${args[1]} == ${NICK,,} ] && printf -- "%s: Slap yourself!\n" "$nick" && exit
+	[ ${args[1]} == "java" ] && printf -- "Slaping Java is not enough. You must grind it to dust and boil its remains.\n" && exit	    
 	printf -- "%s: Are you going to take that?\n" "${args[1]}"
 	;;
     time)
@@ -85,38 +113,91 @@ case "${CMD,,}" in
     uptime)
 	printf -- "%s\n" "$(uptime)"
 	;;
-    ipaddr)
-	printf -- "%s\n" "$(ip addr | grep inet | grep eth0)"
-	;;
     dance)
 	printf -- "I'm dancing the night away!\n"
 	;;
-    google)
-        printf -- "You better check yourself, before you  wreck yourself, fool!\n"
-        ;;
     echo)
-	printf -- "%s\n" "${M_MSG:${#CMD}+1}"
+	printf -- "%s\n" "${M_MSG:5}"
+	;;
+    roles)
+	args=($M_MSG)
+	[ -z ${args[1]} ] && channel=$CHAN || channel=${args[1]}
+	printAccess $channel
+	;;
+    inrole)
+	args=($M_MSG)
+	[ -z ${args[1]} ] && printf -- "Usage: !inrole <role name>\n" && exit
+
+	if [[ $(hasAccess "$CHAN" "${args[1]}") == "True" ]]; then
+	    printf -- "%s: You are a member of role: %s\n" "$nick" "${args[1]}"
+	else
+	    printf -- "%s: Nope, better luck next time\n" "$nick"
+	fi
+	;;
+    grant)
+	args=($M_MSG)
+	login=${args[1]}
+	role=${args[2]}
+	[ ! -z ${args[3]} ] && channel=${args[3]} || channel=$CHAN
+
+	[ -z $login ] || [ -z $role ] && printf -- "Usage: !grant <login> <role name> [channel]\n" && exit
+
+	if [[ $(hasAccess "$channel" "operator") == "True" ]]; then 
+	    grantAccess $login $channel $role
+	    [ $? -eq 0 ] &&
+		printf -- "%s: Added %s to %s (%s)\n" "$nick" "${args[1]}" "${args[2]}" "$CHAN" || \
+		printf -- "%s: Something whent wrong here.\n" "$nick"
+	else
+	    printf -- "%s: %s\n" "$nick" "$AUTH_FAIL"
+	fi
+	;;
+    revoke)
+	args=($M_MSG)
+	login=${args[1]}
+	role=${args[2]}
+	[ ! -z ${args[3]} ] && channel=${args[3]} || channel=$CHAN
+
+	[ -z $login ] || [ -z $role ] && printf -- "Usage: !revoke <login> <role name> [channel]\n" && exit
+
+	if [[ $(hasAccess "$channel" "operator") == "True" ]]; then 
+	    revokeAccess $login $channel $role
+	    [ $? -eq 0 ] &&
+		printf -- "%s: Remove %s from %s (%s)\n" "$nick" "${args[1]}" "${args[2]}" "$CHAN" || \
+		printf -- "%s: Something whent wrong here.\n" "$nick"
+	else
+	    printf -- "%s: %s\n" "$nick" "$AUTH_FAIL"
+	fi
 	;;
     send)
 	args=($M_MSG)
-	[ $[$(userAccess) & 2] != 2 ] && printf -- "%s: You donot have permission to run this comand\n" "$nick" && exit
-	[ -z ${args[1]} ] && printf -- "Usage: !send <channel> message\n" && exit
-	[[ ${args[1]} != \#* ]] && printf -- "%s: I can only send to channels.\n" "$nick" && exit
-	[ ! -f $FS/$HOST/${args[1],,}/out ] && printf -- "%s: I am not in that channel.\n" "$nick" && exit
-	printf -- "%s\n" "${M_MSG:${#CMD}+${#args[1]}+2}" > $FS/$HOST/${args[1],,}/in
+	channel=${args[1]}
+
+	# Validate input
+	[ -z ${args[2]} ] || [ -z $channel ] && printf -- "Usage: !send <channel> <message>\n" && exit
+	[[ $channel != \#* ]] && printf -- "%s: This does not look like a channel name.\n" "$nick" && exit
+
+	# Check for access
+	if [[ $(hasAccess $channel "operator") == "True" ]]; then
+	    [ ! -f $FS/$HOST/${channel}/out ] && printf -- "%s: I am not in that channel.\n" "$nick" && exit
+	    [[ $channel == $CHAN ]] && printf -- "%s: You might consider !echo in this instance.\n" "$nick" && exit
+	    printf -- "%s\n" "${M_MSG:${#channel}+6}" > $FS/$HOST/${channel}/in
+	else
+	    printf -- "%s: %s\n" "$nick" "$AUTH_FAIL"
+	fi
 	;;
     join)
 	args=($M_MSG)
-	[ $[$(userAccess) & 2] != 2 ] && printf -- "%s: You donot have permission to run this comand\n" "$nick" && exit
-	[ -z ${args[1]} ] && printf -- "Usage: !join <channel>\n" && exit
-	[[ ${args[1]} != \#* ]] && printf -- "%s: I can only join channels.\n" "$nick" && exit
-	[ -f $FS/$HOST/${args[1],,}/out ] && printf -- "%s: I think i am already in that channel.\n" "$nick" && exit
-	${SCRIPT_DIR}/join.sh "${args[1],,}" 2> /dev/null
-	;;    
-    wiki)
-	args=($M_MSG)
-	if [[ "${args[1]}" == '!stats' ]]; then
-	     mysql -u ${WIKI_P%:*} -p${WIKI_P/*:} -e "select cat_pages, cat_title from mediawiki.mw_category"
+	channel=${args[1]}
+	# Validate input
+	[ -z $channel ] && printf -- "Usage: !join <channel>\n" && exit
+	[[ $channel != \#* ]] && printf -- "%s: This does not look like a channel name.\n" "$nick" && exit
+
+	# Check for access
+	if [[ $(hasAccess $channel "operator") == "True" ]]; then
+	    [ -f $FS/$HOST/${channel}/out ] && printf -- "%s: I think i am already in that channel.\n" "$nick" && exit
+	    ${SCRIPT_DIR}/join.sh "${channel}"
+	else
+	    printf -- "%s: %s\n" "$nick" "$AUTH_FAIL"
 	fi
 	;;
 esac

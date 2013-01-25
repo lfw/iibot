@@ -1,0 +1,14 @@
+## iibot user authroization file.
+## Structure Definision --
+##  - <Channel>
+##  - <Role Name>: <Space separated users>
+##  - % <- record delimitor.
+
+#channel
+Operator: your_login
+Other:
+%
+#OtherChannel
+Operator: your_login
+somerole: sally
+%

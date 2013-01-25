@@ -32,9 +32,8 @@ SCRIPT_DIR=$(readlink -f $(dirname $0))
 
 # Check if we are already running
 if [ -f $PIDFILE ]; then
-    printf "ERROR: ii apears to be running.\n"
-    printf " If you are sure it is not, please remove the PID file and try agian\n"
-    printf " PIDFILE: %s\n" "${PIDFILE}"
+    printf "ERROR: iibot apears to be running.\n"
+    printf " If you are sure it is not, please remove the PID file, clean up the ii irc fs and try agian\n"
     exit 1
 fi
 
@@ -52,6 +51,7 @@ while [ -f $PIDFILE ]; do
 	sleep 1
     done
 
+    # This is just to get ii to put the fifo's where we need them.
     printf "/privmsg chanserv help\n" > $FS/$HOST/in
     printf "/privmsg nickserv help\n" > $FS/$HOST/in
 
@@ -70,6 +70,7 @@ while [ -f $PIDFILE ]; do
     kill `cat $PIDFILE` &> /dev/null
 done 2> /dev/null & ARLPID=$!
 
+# Show a fancy graphic wile we connect.
 printf "Waiting for %s:  " "${HOST}"
 while [ ! -f $FS/$HOST/out ]; do
     printf '\b|'  & sleep .25
