@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BOT_PID=$$
+PIDFILE=$$
 
 # This function kills jobs, appends the chat to the log file
 # and stops the ii service.
