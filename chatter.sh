@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script executes when a message is recieved from a user that is not prefixed with a '!'.
 # This script is intended to reconize key words and react to them accordingly.

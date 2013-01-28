@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This Script monitors a specific 'in' file in the ii file system.
 # It is assumed this function is thread independent and re-entrent.

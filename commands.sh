@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script executes when a a message is recieved from a user that is prefixed by a '!'.
 # This file should identify and execute the command requested. 
