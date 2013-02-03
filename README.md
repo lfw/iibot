@@ -26,4 +26,16 @@ CHANS[0]=#mychannel
 
 FS=${SCRIPT_DIR}/fs  
 PIDFILE=${SCRIPT_DIR}/ii_${HOST}.pid  
-LOG=${SCRIPT_DIR}/log  
+LOG=${SCRIPT_DIR}/log 
+
+
+#### Example Authoriztion File
+
+#ChannelName
+RoleName: User1 User2 User3
+%
+#AnotherChannel
+RoleName: User1 User2
+Role2: User3 user4
+%
+ 

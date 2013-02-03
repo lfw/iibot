@@ -1,0 +1,6 @@
+config
+*.pid
+log
+login_cache
+auth
+fs/*
