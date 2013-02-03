@@ -18,12 +18,12 @@ A simple and expandable bot created in bash based on [ii] by [suckless].
 
 #### Example configuration file
 
-HOST=irc.freenode.net
-NICK=mybot
-PORT=6667
-NICK_IDENT="account password"
-CHANS[0]=#mychannel
+HOST=irc.freenode.net  
+NICK=mybot  
+PORT=6667  
+NICK_IDENT="account password"  
+CHANS[0]=#mychannel  
 
-FS=${SCRIPT_DIR}/fs
-PIDFILE=${SCRIPT_DIR}/ii_${HOST}.pid
-LOG=${SCRIPT_DIR}/log
+FS=${SCRIPT_DIR}/fs  
+PIDFILE=${SCRIPT_DIR}/ii_${HOST}.pid  
+LOG=${SCRIPT_DIR}/log  

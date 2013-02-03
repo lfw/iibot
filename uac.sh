@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 _ACTION=${1,,}
 _USER=${2,,}

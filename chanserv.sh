@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script executes when a message from chanserv, user -!-, is recieved.
 # The loose intension of this script is to set user status to execute some commands.
