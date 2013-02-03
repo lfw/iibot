@@ -21,11 +21,11 @@ SCRIPT_DIR=$(readlink -f $(dirname $0))
 [ -f $SCRIPT_DIR/config ] && . $SCRIPT_DIR/config
 
 # Respond to any instance of the word help, Help, or HELP.
-[[ "${M_MSG}" =~ " help" ]] || \
-    [[ "${M_MSG}" =~ "help " ]] || \
-    [[ "${M_MSG}" =~ " help " ]] && \
-    printf -- "%s: We all need help, some more than others.\n" "$nick" && \
-    exit
+#[[ "${M_MSG}" =~ " help" ]] || \
+#    [[ "${M_MSG}" =~ "help " ]] || \
+#    [[ "${M_MSG}" =~ " help " ]] && \
+#    printf -- "%s: We all need help, some more than others.\n" "$nick" && \
+#    exit
 
 # Respond to java
 [[ "${M_MSG}" =~ " java " ]] || \
