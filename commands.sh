@@ -36,10 +36,9 @@ function grantAccess {
     local _chan=$2
     local _role=$3
 
-    [[ -z $_user ]] && printf "Could not find username.\n" && exit 1
+    [[ -z $_user ]] && printf "%s: Could not find username.\n" "$nick" && exit 1
 
-    ## Fix this use login name, not nick
-    ${SCRIPT_DIR}/uac.sh "add" $_user $_chan $_role
+    echo ${SCRIPT_DIR}/uac.sh "add" "$_user" "$_chan" "$_role"
     return $?
 }
 
@@ -50,7 +49,6 @@ function revokeAccess {
 
     [[ -z $_user ]] && exit 1
 
-    ## Fix this use login name, not nick
     ${SCRIPT_DIR}/uac.sh "remove" $_user $_chan $_role
     return $?
 }
@@ -145,7 +143,7 @@ case "${M_MSG%% *}" in
 	if [[ $(hasAccess "$channel" "operator") == "True" ]]; then 
 	    grantAccess $login $channel $role
 	    [ $? -eq 0 ] &&
-		printf -- "%s: Added %s to %s (%s)\n" "$nick" "${args[1]}" "${args[2]}" "$CHAN" || \
+		printf -- "%s: Added %s to %s (%s)\n" "$nick" "${args[1]}" "${args[2]}" "$channel" || \
 		printf -- "%s: Something whent wrong here.\n" "$nick"
 	else
 	    printf -- "%s: %s\n" "$nick" "$AUTH_FAIL"

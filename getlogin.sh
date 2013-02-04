@@ -32,5 +32,10 @@ while read -r date time nick user garbage; do \
     echo ${user,,}; \
 done | tail -n1) 
 
-printf -- "%s:%s\n" "${V}" "${_NICK,,}" >> $SCRIPT_DIR/login_cache
-printf -- "%s\n" " $V"
+if [ ! -z "$V" ]; then
+    printf -- "%s:%s\n" "${V}" "${_NICK,,}" >> $SCRIPT_DIR/login_cache
+    printf -- "%s\n" " $V"
+    exit 0
+fi
+
+exit 1
