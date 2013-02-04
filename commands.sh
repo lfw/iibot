@@ -38,7 +38,7 @@ function grantAccess {
 
     [[ -z $_user ]] && printf "%s: Could not find username.\n" "$nick" && exit 1
 
-    echo ${SCRIPT_DIR}/uac.sh "add" "$_user" "$_chan" "$_role"
+    ${SCRIPT_DIR}/uac.sh "add" "$_user" "$_chan" "$_role"
     return $?
 }
 
