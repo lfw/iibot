@@ -14,7 +14,7 @@ A simple and expandable bot created in bash based on [ii] by [suckless].
  * Channel Logging - All chanels are logged to a user defined file
  * Simple Configuration - /config holds all settings needed to start up iibot.
  * Basic user authorization - By default, iibot uses voice and op status to set user authorization levels.
-
+ * SSL support w/ ii ssl patch  http://tools.suckless.org/ii/patches/ssl
 
 #### Example configuration file
 
@@ -23,7 +23,7 @@ NICK=mybot
 PORT=6667  
 NICK_IDENT="account password"  
 CHANS[0]=#mychannel  
-
+SSL="-e ssl"  # Note you must have ssl patch for ii  
 FS=${SCRIPT_DIR}/fs  
 PIDFILE=${SCRIPT_DIR}/ii_${HOST}.pid  
 LOG=${SCRIPT_DIR}/log 

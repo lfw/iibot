@@ -44,7 +44,7 @@ trap 'cleanup' SIGINT SIGQUIT
 
 touch $PIDFILE
 while [ -f $PIDFILE ]; do
-    ii -i "${FS}" -s "${HOST}" -p "${PORT}" -n "${NICK}" &> /dev/null & IIPID="$!"
+    ii $SSL -i "${FS}" -s "${HOST}" -p "${PORT}" -n "${NICK}" &> /dev/null & IIPID="$!"
     printf "%s " "$IIPID" > $PIDFILE
 
     while [ ! -f $FS/$HOST/out ]; do
