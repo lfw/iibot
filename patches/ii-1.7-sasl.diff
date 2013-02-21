@@ -1,0 +1,105 @@
+diff --git a/ii.c b/ii.c
+index 1538f72..7233c10 100644
+--- a/ii.c
++++ b/ii.c
+@@ -46,6 +46,7 @@ struct Channel {
+ 
+ conn *irc;
+ static int use_ssl;
++static int use_sasl;
+ static time_t last_response;
+ static Channel *channels = NULL;
+ static char *host = "irc.freenode.net";
+@@ -53,12 +54,14 @@ static char nick[32];			/* might change while running */
+ static char path[_POSIX_PATH_MAX];
+ static char message[PIPE_BUF]; /* message buf used for communication */
+ 
++static int read_line(int fd, size_t res_len, char *buf, int from_server);
++
+ static void usage() {
+ 	fputs("ii - irc it - " VERSION "\n"
+ 	      "(C)opyright MMV-MMVI Anselm R. Garbe\n"
+ 	      "(C)opyright MMV-MMXI Nico Golde\n"
+ 	      "usage: ii [-i <irc dir>] [-s <host>] [-p <port>] [-e ssl]\n"
+-	      "          [-n <nick>] [-k <password>] [-f <fullname>]\n", stderr);
++	      "          [-n <nick>] [-k <password>] [-f <fullname>] [-a $(echo -ne \"nick\\0username\\0password\" | base64)]\n", stderr);
+ 	exit(EXIT_FAILURE);
+ }
+ 
+@@ -154,6 +157,47 @@ static void rm_channel(Channel *c) {
+ 	free(c);
+ }
+ 
++static void wait_for(char *match) {
++        static char buf[PIPE_BUF];
++        char *ptr;
++
++        for (;;) {
++                if(read_line(irc->irc, PIPE_BUF, buf, 1) == -1) {
++                        perror("ii: remote host closed connection");
++                        exit(EXIT_FAILURE);
++                }
++                ptr = strstr(buf, match);
++                fprintf(stderr, "%s\n", buf);
++                if (ptr != NULL)
++                        break;
++        }
++}
++
++static void sasl_login(char *sasl, char *fullname) {
++        snprintf(message, PIPE_BUF, "CAP LS\r\n");
++        WRITE(irc, message, strlen(message));
++
++        snprintf(message, PIPE_BUF,
++                        "NICK %s\r\nUSER %s localhost %s :%s\r\n",
++                        nick, nick, host, fullname ? fullname : nick);
++        WRITE(irc, message, strlen(message));
++        wait_for("CAP");
++
++        snprintf(message, PIPE_BUF, "CAP REQ :identify-msg multi-prefix sasl\r\n");
++        WRITE(irc, message, strlen(message));
++        wait_for("CAP");
++
++        snprintf(message, PIPE_BUF, "AUTHENTICATE PLAIN\r\n");
++        WRITE(irc, message, strlen(message));
++
++        snprintf(message, PIPE_BUF, "AUTHENTICATE %s\n", sasl);
++        WRITE(irc, message, strlen(message));
++        wait_for("903");
++
++        snprintf(message, PIPE_BUF, "CAP END\r\n");
++        WRITE(irc, message, strlen(message));
++}
++
+ static void login(char *key, char *fullname) {
+ 	if(key) snprintf(message, PIPE_BUF,
+ 				"PASS %s\r\nNICK %s\r\nUSER %s localhost %s :%s\r\n", key,
+@@ -485,7 +529,7 @@ int main(int argc, char *argv[]) {
+ 	int i;
+ 	unsigned short port = SERVER_PORT;
+ 	struct passwd *spw = getpwuid(getuid());
+-	char *key = NULL, *fullname = NULL;
++	char *key = NULL, *sasl = NULL, *fullname = NULL;
+ 	char prefix[_POSIX_PATH_MAX];
+ 
+ 	if(!spw) {
+@@ -505,6 +549,7 @@ int main(int argc, char *argv[]) {
+ 			case 'k': key = getenv(argv[++i]); break;
+ 			case 'e': use_ssl = 1; ++i; break;
+ 			case 'f': fullname = argv[++i]; break;
++			case 'a': use_sasl = 1; sasl = argv[++i]; break;
+ 			default: usage(); break;
+ 		}
+ 	}
+@@ -518,7 +563,10 @@ int main(int argc, char *argv[]) {
+ 	create_dirtree(path);
+ 
+ 	add_channel(""); /* master channel */
+-	login(key, fullname);
++	if(use_sasl)
++		sasl_login(sasl, fullname);
++	else
++		login(key, fullname);
+ 	run();
+ 
+ 	return EXIT_SUCCESS;
