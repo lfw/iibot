@@ -3,8 +3,6 @@
 This patch is taken directly from http://tools.suckless.org/ii/patches/ssl
 The included patch was downloaded from http://tools.suckless.org/ii/patches/ii-1.7-ssl.diff  on 2013-02-19
 
-`git apply patches/ii-1.7-ssl.diff`  
-
 ## SASL patch
 This patch was written by me as a quick hack to add basic SASL authentication to ii
 You have to specify -a <saslhash> on the command line.  PLAIN SASL hash can be obtained from the command line.  
