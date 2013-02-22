@@ -15,27 +15,29 @@ A simple and expandable bot created in bash based on [ii] by [suckless].
  * Simple Configuration - /config holds all settings needed to start up iibot.
  * Basic user authorization - By default, iibot uses voice and op status to set user authorization levels.
  * SSL support w/ ii ssl patch  http://tools.suckless.org/ii/patches/ssl
+ * SASL support w/ ii sasl patch (see patches/)
 
-#### Example configuration file
+#### Example config file
 
 HOST=irc.freenode.net  
 NICK=mybot  
-PORT=6667  
+\#PORT=6667  # This will default to 6667 or 6697 if SSL is set   
 NICK_IDENT="account password"  
 CHANS[0]=#mychannel  
-SSL="-e ssl"  # Note you must have ssl patch for ii  
+\#SSL="encryptifyoucan"  # must have ssl patch for ii  
+\#SASL="$(echo -ne "nick\0username\0password" | base64)"  # must have sasl patch for ii  
 FS=${SCRIPT_DIR}/fs  
 PIDFILE=${SCRIPT_DIR}/ii_${HOST}.pid  
 LOG=${SCRIPT_DIR}/log 
 
 
-#### Example Authoriztion File
+#### Example Authorization File
 
-#ChannelName
-RoleName: User1 User2 User3
-%
-#AnotherChannel
-RoleName: User1 User2
-Role2: User3 user4
-%
+\#ChannelName  
+RoleName: User1 User2 User3  
+%  
+\#AnotherChannel  
+RoleName: User1 User2  
+Role2: User3 user4  
+%  
  

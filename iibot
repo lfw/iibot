@@ -27,8 +27,20 @@ function cleanup {
 SCRIPT_DIR=$(readlink -f $(dirname $0))
 [ -f $SCRIPT_DIR/config ] && . $SCRIPT_DIR/config
 
-## Set default IRC port
-[ -z $PORT ] && PORT=6667
+## Setup IRC settings for SSL/non-SSL connections
+if [ -z $PORT ]; then
+    if [ -n "$SSL" ]; then
+        SSL_PARAM="-e ssl "
+        PORT=6697
+    else
+        PORT=6667
+    fi
+fi
+
+## Set SASL if specified in config
+if [ -n "$SASL" ]; then
+    SASL_PARAM="-a $SASL "
+fi
 
 # Check if we are already running
 if [ -f $PIDFILE ]; then
@@ -44,7 +56,7 @@ trap 'cleanup' SIGINT SIGQUIT
 
 touch $PIDFILE
 while [ -f $PIDFILE ]; do
-    ii $SSL -i "${FS}" -s "${HOST}" -p "${PORT}" -n "${NICK}" &> /dev/null & IIPID="$!"
+    $TOR_CMD ii "${SSL_PARAM}" -i "${FS}" -s "${HOST}" -p "${PORT}" -f "${NICK}" -n "${NICK}" "${SASL_PARAM}" &> /dev/null & IIPID="$!"
     printf "%s " "$IIPID" > $PIDFILE
 
     while [ ! -f $FS/$HOST/out ]; do
